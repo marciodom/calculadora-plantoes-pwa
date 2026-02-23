@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Calculadora de Plantões - PWA</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#020617">
+  <style>
+    /* ========== ESTILOS GLOBAIS ========== */
+    body {
+      font-family: Arial, sans-serif;
+      background: #2c5a70;        /* azul pastel escuro */
+      padding: 20px;
+      margin: 0;
+      color: #fff;                 /* texto padrão branco */
+    }
+
+    h1 {
+      text-align: center;
+      color: white;
+      margin-top: 0;
+    }
+
+    /* ========== TOPO (BOTÃO + DATA) ========== */
+    .topo {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    /* Botão de instalação laranja */
+    .btn-install {
+      background-color: #f97316;   /* laranja */
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 24px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      transition: background 0.2s;
+      display: none;                /* escondido até o evento beforeinstallprompt */
+    }
+    .btn-install:hover {
+      background-color: #ea580c;
+    }
+
+    /* Grupo da data */
+    .data-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: center;
+    }
+
+    label {
+      font-size: 14px;
+      color: white;
+    }
+
+    /* Inputs e selects com aparência consistente */
+    input, select {
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #cbd5e1;
+      font-size: 1rem;
+      background: #dbeafe;          /* mesmo tom da data para selects */
+    }
+
+    /* A data mantém o fundo, mas o seletor acima já aplica o mesmo tom */
+    input[type="date"] {
+      background: #dbeafe;
+    }
+
+    /* ========== CARDS DAS LOJAS ========== */
+    .container {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+    }
+
+    .card {
+      background: #fff;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.08);
+      color: #000;                  /* texto preto dentro do card */
+    }
+
+    .card h3 {
+      background: #bbf7d0;
+      color: #065f46;
+      padding: 6px;
+      text-align: center;
+      border-radius: 6px;
+      margin-top: 0;
+    }
+
+    .linha {
+      display: flex;
+      gap: 10px;
+      margin-top: 10px;
+    }
+
+    /* ========== BOTÕES PRINCIPAIS ========== */
+    .botoes {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 12px;
+      font-size: 16px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    .btn-relatorio {
+      background: #15803d;
+      color: #fff;
+    }
+
+    .btn-limpar {
+      background: #dc2626;
+      color: #fff;
+    }
+
+    /* ========== TOTAL ========== */
+    .total-card {
+      margin-top: 20px;
+      background: #020617;
+      color: #fff;
+      padding: 18px;
+      border-radius: 12px;
+      text-align: center;
+      font-size: 22px;
+    }
+
+    /* ========== RODAPÉ ========== */
+    footer {
+      text-align: center;
+      margin-top: 30px;
+      font-size: 14px;
+      color: rgba(255,255,255,0.8);
+      border-top: 1px solid rgba(255,255,255,0.2);
+      padding-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Calculadora de Plantões</h1>
+
+  <!-- TOPO: botão de instalação + data -->
+  <div class="topo">
+    <button id="installButton" class="btn-install">📲 Instalar App</button>
+    <div class="data-group">
+      <label>Data</label>
+      <input type="date" id="data">
+    </div>
+  </div>
+
+  <!-- CARDS DAS LOJAS -->
+  <div class="container" id="lojas"></div>
+
+  <!-- BOTÕES DE AÇÃO -->
+  <div class="botoes">
+    <button class="btn-relatorio" onclick="gerarRelatorio()">Gerar Relatório Completo</button>
+    <button class="btn-limpar" onclick="limparTudo()">Limpar Tudo</button>
+  </div>
+
+  <!-- TOTAL GERAL -->
+  <div class="total-card">
+    Total Geral: R$ <span id="total">0,00</span>
+  </div>
+
+  <!-- RODAPÉ -->
+  <footer>
+    © Calculadora de Plantões - Todos os direitos reservados.<br>
+    Desenvolvido por: Márcio Dom
+  </footer>
+
+  <script>
+    // ========== DADOS DAS LOJAS E VALORES ==========
+    const lojas = ["PV","PG","WS","BM","ML","PK"];
+    const valores = {
+      A:{PG:90,WS:90,BM:90,ML:90,PK:105,PV:110},
+      B:{PG:80,WS:80,BM:80,ML:80,PK:80,PV:80},
+      C:{PG:100,WS:100,BM:100,ML:100,PK:100,PV:100}
+    };
+
+    // ========== CRIA OS CARDS DINAMICAMENTE ==========
+    const container = document.getElementById("lojas");
+    lojas.forEach(loja => {
+      container.innerHTML += `
+        <div class="card">
+          <h3>${loja}</h3>
+          <div class="linha">
+            <select>
+              <option value="0">Nenhum turno</option>
+              <option value="A">Turno A</option>
+              <option value="B">Turno B</option>
+              <option value="AB">Turno AB</option>
+              <option value="C">Turno C</option>
+              <option value="ABC">Turno ABC</option>
+            </select>
+            <select>
+              <option value="0">Quantidade</option>
+              ${Array.from({length:10},(_,i)=>`
+                <option value="${i+1}">${i+1} ${i+1===1?"vez":"vezes"}</option>`).join("")}
+            </select>
+          </div>
+        </div>`;
+    });
+
+    // ========== CÁLCULO E PERSISTÊNCIA ==========
+    document.addEventListener("change", calcular);
+
+    function calcular(){
+      let total = 0, dados = [];
+      document.querySelectorAll(".card").forEach(c => {
+        const loja = c.querySelector("h3").innerText;
+        const turno = c.querySelectorAll("select")[0].value;
+        const qtd = parseInt(c.querySelectorAll("select")[1].value);
+        if(turno === "0" || qtd === 0) return;
+        let valor = 0;
+        if(turno === "AB") valor = ((valores.A[loja]||0)+(valores.B[loja]||0))*qtd;
+        else if(turno === "ABC") valor = ((valores.A[loja]||0)+(valores.B[loja]||0)+(valores.C[loja]||0))*qtd;
+        else valor = (valores[turno][loja]||0)*qtd;
+        total += valor;
+        dados.push({loja, turno, qtd, valor});
+      });
+      document.getElementById("total").innerText = total.toFixed(2);
+      localStorage.setItem("plantoes", JSON.stringify({data: document.getElementById("data").value, dados, total}));
+    }
+
+    function limparTudo(){
+      if(confirm("Deseja limpar tudo?")){
+        localStorage.clear();
+        location.reload();
+      }
+    }
+
+    function carregar(){
+      const s = JSON.parse(localStorage.getItem("plantoes"));
+      if(!s) return;
+      document.getElementById("data").value = s.data;
+      document.getElementById("total").innerText = s.total.toFixed(2);
+      document.querySelectorAll(".card").forEach(c => {
+        const loja = c.querySelector("h3").innerText;
+        const i = s.dados.find(d => d.loja === loja);
+        if(i){
+          c.querySelectorAll("select")[0].value = i.turno;
+          c.querySelectorAll("select")[1].value = i.qtd;
+        }
+      });
+    }
+
+    // ========== RELATÓRIO JPG ==========
+    function gerarRelatorio(){
+      const d = JSON.parse(localStorage.getItem("plantoes"));
+      if(!d) return alert("Sem dados.");
+
+      const dataBR = d.data ? d.data.split("-").reverse().join("/") : "";
+      const c = document.createElement("canvas"), x = c.getContext("2d");
+      c.width = 1200; c.height = 800;
+
+      x.fillStyle = "#f8fafc";
+      x.fillRect(0, 0, c.width, c.height);
+
+      x.fillStyle = "#1e3a8a";
+      x.font = "bold 48px Arial";
+      x.fillText("Relatório de Plantões", 50, 70);
+
+      x.font = "28px Arial";
+      x.fillStyle = "#334155";
+      x.fillText("Data: "+dataBR, 50, 115);
+
+      let y = 180;
+      x.fillStyle = "#dbeafe";
+      x.fillRect(40, y-45, 1120, 60);
+
+      x.fillStyle = "#1e3a8a";
+      x.font = "bold 26px Arial";
+      x.fillText("Loja", 70, y);
+      x.fillText("Turno", 220, y);
+      x.fillText("Quantidade", 430, y);
+      x.fillText("Valor (R$)", 780, y);
+
+      y += 55;
+      x.font = "24px Arial";
+
+      d.dados.forEach((r, i) => {
+        if(i%2 === 0){
+          x.fillStyle = "#f1f5f9";
+          x.fillRect(40, y-40, 1120, 48);
+        }
+        x.fillStyle = "#000";
+        x.fillText(r.loja, 70, y);
+        x.fillText(r.turno, 220, y);
+        x.fillText(`${r.qtd} ${r.qtd===1?"vez":"vezes"}`, 430, y);
+        x.fillText("R$ "+r.valor.toFixed(2), 780, y);
+        y += 48;
+      });
+
+      x.fillStyle = "#bbf7d0";
+      x.fillRect(40, y+20, 1120, 70);
+
+      x.fillStyle = "#065f46";
+      x.font = "bold 32px Arial";
+      x.fillText("Total Geral: R$ "+d.total.toFixed(2), 70, y+65);
+
+      const link = document.createElement("a");
+      link.download = "relatorio_plantoes.jpg";
+      link.href = c.toDataURL("image/jpeg");
+      link.click();
+    }
+
+    carregar();
+
+    // ========== LÓGICA DE INSTALAÇÃO PWA ==========
+    let deferredPrompt;
+    const installButton = document.getElementById('installButton');
+
+    // Esconde o botão inicialmente (já está display:none no CSS, mas garantimos)
+    installButton.style.display = 'none';
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+      // Previne que o mini-infobar apareça automaticamente
+      e.preventDefault();
+      // Armazena o evento para usar depois
+      deferredPrompt = e;
+      // Mostra o botão de instalação
+      installButton.style.display = 'inline-block';
+    });
+
+    installButton.addEventListener('click', async () => {
+      if (!deferredPrompt) return;
+      // Exibe o prompt de instalação
+      deferredPrompt.prompt();
+      // Aguarda a escolha do usuário
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`Usuário ${outcome === 'accepted' ? 'aceitou' : 'recusou'} a instalação`);
+      // Não podemos usar o mesmo prompt duas vezes, então descarta
+      deferredPrompt = null;
+      // Esconde o botão novamente
+      installButton.style.display = 'none';
+    });
+
+    window.addEventListener('appinstalled', () => {
+      // O app foi instalado, esconde o botão (caso ainda esteja visível)
+      installButton.style.display = 'none';
+      console.log('PWA instalado com sucesso!');
+    });
+
+    // ========== SERVICE WORKER ==========
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js')
+          .then(reg => console.log('Service Worker registrado!', reg))
+          .catch(err => console.log('Erro ao registrar Service Worker:', err));
+      });
+    }
+  </script>
+</body>
+</html>
