@@ -4,8 +4,17 @@
 
  Este projeto foi desenvolvido com foco em aprendizado prático de versionamento com Git, deploy contínuo e configuração de aplicações web estáticas.
 
- Esta Aplicação Web funciona como uma Calculadora de Plantões, geradas para vigilantes de estacionamento de uma rede de supermercados, gerados e personalizados com nomes abreviados das lojas onde prestam o serviço. 
- A aplicação disponibiliza a seleção de turnos trabalhados e a quantidade de vezes que o profissional estará naquela loja. Além de saber os valores que irá receber no mês seguinte e a possibilidade de  gerar o relatório e baixar  em formato JPEG.
+ Sobre a Aplicação:
+ A aplicação funciona como uma Calculadora de Plantões voltada para vigilantes que atuam em estacionamentos de uma rede de supermercados.
+
+Funcionalidades:
+Seleção de turnos trabalhados
+Definição da quantidade de plantões por loja
+Cálculo automático do valor a receber no mês seguinte
+Geração de relatório personalizado
+Exportação do relatório em formato JPEG
+Instalação como aplicativo no dispositivo (PWA)
+Funcionamento offline
 ---
 
 ## 🚀 Demonstração
@@ -39,8 +48,16 @@ https://marciodom.github.io/calculadora-plantoes-pwa/
 
 ## 📂 Estrutura do Projeto
 
-calculadora-plantoes-pwa/ │ ├── index.html ├── manifest.json ├── sw.js ├── icon-192.png ├── icon-512.png └── README.md
-
+```
+calculadora-plantoes-pwa/
+│
+├── index.html
+├── manifest.json
+├── sw.js
+├── icons/
+│   ├── icon-192.png
+│   ├── icon-512.png
+└── README.md
 ---
 
 ## 📚 Aprendizados Aplicados
